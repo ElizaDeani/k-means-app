@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Skill Analysis - Segmentasi Lowongan</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <nav class="navbar navbar-dark">
+        <div class="container">
+            <span class="navbar-brand">
+                <i class="fas fa-code me-2"></i>
+                Skill Analysis
+            </span>
+            <div>
+                <a href="dashboard.html" class="btn btn-outline-light btn-sm me-2">
+                    <i class="fas fa-tachometer-alt"></i> Dashboard
+                </a>
+                <a href="index.html" class="btn btn-outline-light btn-sm">
+                    <i class="fas fa-home"></i> Home
+                </a>
+            </div>
+        </div>
+    </nav>
+    
+    <div class="container mt-4">
+        <div class="d-flex align-items-center mb-4">
+            <button class="back-btn me-3" onclick="history.back()">
+                <i class="fas fa-arrow-left"></i> Kembali
+            </button>
+            <h3 class="mb-0"><i class="fas fa-chart-line text-primary"></i> Analisis Kombinasi Skill</h3>
+        </div>
+        
+        <div id="noDataAlert" class="alert alert-warning text-center" style="display: none;">
+            <i class="fas fa-exclamation-triangle"></i> Belum ada data clustering.
+            <a href="index.html" class="alert-link">Upload data terlebih dahulu</a>
+        </div>
+        
+        <div id="analysisContent" style="display: none;"></div>
+    </div>
+    
+    <script>
+        const data = JSON.parse(sessionStorage.getItem('clusteringData'));
+        
+        if (!data) {
+            document.getElementById('noDataAlert').style.display = 'block';
+        } else {
+            document.getElementById('noDataAlert').style.display = 'none';
+            renderSkillAnalysis(data);
+        }
+        
+        function renderSkillAnalysis(data) {
+            const skillFreq = {};
+            data.jobs.forEach(job => {
+                job.skills.forEach(skill => {
+                    const skillName = skill.trim().toLowerCase();
+                    skillFreq[skillName] = (skillFreq[skillName] || 0) + 1;
+                });
+            });
+            
+            const sortedSkills = Object.entries(skillFreq).sort((a, b) => b[1] - a[1]).slice(0, 20);
+            
+            const html = `
+                <div class="card shadow-sm mb-4">
+                    <div class="card-header bg-white">
+                        <h5 class="mb-0"><i class="fas fa-chart-bar"></i> Top 20 Skill Paling Sering Diminta</h5>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="topSkillsChart" height="300"></canvas>
+                    </div>
+                </div>
+                
+                <h4 class="mb-3"><i class="fas fa-link"></i> Kombinasi Skill per Cluster</h4>
+                <div id="combinationsContainer" class="row"></div>
+                
+                <div class="card shadow-sm mt-4">
+                    <div class="card-header bg-white">
+                        <h5 class="mb-0"><i class="fas fa-project-diagram"></i> Skill yang Sering Muncul Bersama</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="cooccurrenceContainer" class="row"></div>
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('analysisContent').innerHTML = html;
+            document.getElementById('analysisContent').style.display = 'block';
+            
+            // Top Skills Chart
+            new Chart(document.getElementById('topSkillsChart'), {
+                type: 'bar',
+                data: {
+                    labels: sortedSkills.map(s => s[0]),
+                    datasets: [{
+                        label: 'Frekuensi Kemunculan',
+                        data: sortedSkills.map(s => s[1]),
+                        backgroundColor: 'rgba(102, 126, 234, 0.7)',
+                        borderRadius: 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: { legend: { position: 'top' } },
+                    scales: {
+                        y: { beginAtZero: true, title: { display: true, text: 'Jumlah Lowongan' } },
+                        x: { ticks: { rotation: 45, maxRotation: 45, minRotation: 45 } }
+                    }
+                }
+            });
+            
+            // Skill Combinations per Cluster
+            let combosHtml = '';
+            data.clusters.forEach(cluster => {
+                const topSkills = cluster.top_skills.slice(0, 5).map(s => s[0]);
+                combosHtml += `
+                    <div class="col-md-6 mb-3">
+                        <div class="combo-card">
+                            <h5 class="mb-2">
+                                <span class="badge bg-light text-dark me-2">Cluster ${cluster.id}</span>
+                                ${cluster.name}
+                            </h5>
+                            <div class="mt-2">
+                                ${topSkills.map(skill => `<span class="skill-tag">${skill}</span>`).join('')}
+                            </div>
+                            <p class="mt-2 small mb-0">
+                                <i class="fas fa-info-circle"></i> Kombinasi skill ini sering muncul bersama dalam lowongan ${cluster.name}
+                            </p>
+                        </div>
+                    </div>
+                `;
+            });
+            document.getElementById('combinationsContainer').innerHTML = combosHtml;
+            
+            // Skill Co-occurrence
+            const cooccurrence = {};
+            data.jobs.forEach(job => {
+                const skills = job.skills.map(s => s.trim().toLowerCase());
+                for (let i = 0; i < skills.length; i++) {
+                    for (let j = i + 1; j < skills.length; j++) {
+                        const pair = [skills[i], skills[j]].sort().join(' + ');
+                        cooccurrence[pair] = (cooccurrence[pair] || 0) + 1;
+                    }
+                }
+            });
+            
+            const topPairs = Object.entries(cooccurrence).sort((a, b) => b[1] - a[1]).slice(0, 10);
+            let coHtml = '';
+            topPairs.forEach(([pair, count]) => {
+                coHtml += `
+                    <div class="col-md-6 mb-2">
+                        <div class="skill-card">
+                            <span class="skill-name">${pair}</span>
+                            <div class="progress mt-2">
+                                <div class="progress-bar bg-primary" style="width: ${(count / data.n_samples) * 100}%"></div>
+                            </div>
+                            <small class="text-muted">Muncul di ${count} lowongan (${((count / data.n_samples) * 100).toFixed(1)}%)</small>
+                        </div>
+                    </div>
+                `;
+            });
+            document.getElementById('cooccurrenceContainer').innerHTML = coHtml;
+        }
+    </script>
+</body>
+</html>

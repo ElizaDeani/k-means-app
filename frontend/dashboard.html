@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Segmentasi Lowongan</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="css/style.css">
+    
+    <style>
+        /* Additional inline styles for better display */
+        .stat-card {
+            background: white;
+            border-radius: 16px;
+            padding: 20px;
+            text-align: center;
+            transition: transform 0.2s;
+            border: none;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            height: 100%;
+        }
+        .stat-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+        }
+        .stat-number {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #667eea;
+        }
+        .evaluation-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 16px;
+            padding: 20px;
+            text-align: center;
+            height: 100%;
+        }
+        .evaluation-card.orange {
+            background: linear-gradient(135deg, #ff9800, #f57c00);
+        }
+        .evaluation-card.purple {
+            background: linear-gradient(135deg, #9c27b0, #7b1fa2);
+        }
+        .evaluation-number {
+            font-size: 1.8rem;
+            font-weight: bold;
+        }
+        .cluster-card {
+            border-left: 5px solid;
+            margin-bottom: 20px;
+            border-radius: 12px;
+            transition: all 0.2s;
+        }
+        .cluster-card:hover {
+            transform: translateX(5px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        .cluster-card.cluster-0 { border-left-color: #4361ee; }
+        .cluster-card.cluster-1 { border-left-color: #4caf50; }
+        .cluster-card.cluster-2 { border-left-color: #ff9800; }
+        .cluster-card.cluster-3 { border-left-color: #f44336; }
+        .cluster-card.cluster-4 { border-left-color: #9c27b0; }
+        .skill-tag {
+            display: inline-block;
+            background: #e9ecef;
+            padding: 4px 12px;
+            margin: 4px;
+            border-radius: 20px;
+            font-size: 12px;
+        }
+        .menu-card {
+            transition: all 0.2s;
+            cursor: pointer;
+            border: none;
+            border-radius: 16px;
+        }
+        .menu-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        }
+        .menu-icon {
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 12px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.5rem;
+            margin-bottom: 10px;
+        }
+        .table-responsive {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .step-indicator {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 30px;
+            background: white;
+            padding: 15px;
+            border-radius: 50px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+        .step {
+            text-align: center;
+            flex: 1;
+            position: relative;
+        }
+        .step .circle {
+            width: 35px;
+            height: 35px;
+            background: #e9ecef;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 14px;
+            color: #6c757d;
+        }
+        .step.completed .circle {
+            background: #28a745;
+            color: white;
+        }
+        .step.active .circle {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .step .label {
+            font-size: 11px;
+            margin-top: 5px;
+            color: #6c757d;
+        }
+        .step.completed .label {
+            color: #28a745;
+        }
+        .step.active .label {
+            color: #667eea;
+            font-weight: 500;
+        }
+        .back-btn {
+            background: white;
+            border: none;
+            border-radius: 8px;
+            padding: 8px 16px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .back-btn:hover {
+            transform: translateX(-3px);
+        }
+        .navbar {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-dark">
+        <div class="container">
+            <span class="navbar-brand">
+                <i class="fas fa-chart-pie me-2"></i>
+                Dashboard Hasil Clustering
+            </span>
+            <a href="index.html" class="btn btn-outline-light btn-sm">
+                <i class="fas fa-home"></i> Home
+            </a>
+        </div>
+    </nav>
+    
+    <div class="container mt-4">
+        <!-- Step Indicator -->
+        <div class="step-indicator">
+            <div class="step completed">
+                <div class="circle">✓</div>
+                <div class="label">Upload Data</div>
+            </div>
+            <div class="step active">
+                <div class="circle">2</div>
+                <div class="label">Dashboard</div>
+            </div>
+            <div class="step">
+                <div class="circle">3</div>
+                <div class="label">Eksplorasi</div>
+            </div>
+        </div>
+        
+        <!-- Alert jika tidak ada data -->
+        <div id="noDataAlert" class="alert alert-warning text-center" style="display: none;">
+            <i class="fas fa-exclamation-triangle"></i> Belum ada data clustering.
+            <a href="index.html" class="alert-link">Upload data terlebih dahulu</a>
+        </div>
+        
+        <!-- Dashboard Content -->
+        <div id="dashboardContent" style="display: none;"></div>
+    </div>
+    
+    <script>
+        // Ambil data dari sessionStorage
+        const data = JSON.parse(sessionStorage.getItem('clusteringData'));
+        
+        if (!data) {
+            document.getElementById('noDataAlert').style.display = 'block';
+            document.getElementById('dashboardContent').style.display = 'none';
+        } else {
+            document.getElementById('noDataAlert').style.display = 'none';
+            renderDashboard(data);
+        }
+        
+        function renderDashboard(data) {
+            // Hitung skill unik
+            const uniqueSkills = new Set();
+            data.jobs.forEach(job => {
+                job.skills.forEach(s => uniqueSkills.add(s.trim().toLowerCase()));
+            });
+            
+            // Hitung rata-rata skill per lowongan
+            const avgSkills = (data.jobs.reduce((sum, job) => sum + job.skills.length, 0) / data.jobs.length).toFixed(1);
+            
+            // HTML Dashboard Lengkap
+            const html = `
+                <!-- Stat Cards - Ringkasan Utama -->
+                <div class="row mb-4">
+                    <div class="col-md-3 mb-3">
+                        <div class="stat-card">
+                            <div class="stat-number">${data.n_samples}</div>
+                            <div class="text-muted">Total Lowongan</div>
+                            <small>dianalisis</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <div class="stat-card">
+                            <div class="stat-number">${data.n_clusters}</div>
+                            <div class="text-muted">Jumlah Cluster</div>
+                            <small>kelompok teridentifikasi</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <div class="stat-card">
+                            <div class="stat-number">${uniqueSkills.size}</div>
+                            <div class="text-muted">Skill Unik</div>
+                            <small>berbeda yang diminta</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <div class="stat-card">
+                            <div class="stat-number">${avgSkills}</div>
+                            <div class="text-muted">Rata-rata Skill</div>
+                            <small>per lowongan</small>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Evaluation Metrics - Kualitas Clustering -->
+                <h5 class="mb-3"><i class="fas fa-chart-line text-primary"></i> Evaluasi Kualitas Clustering</h5>
+                <div class="row mb-4">
+                    <div class="col-md-4 mb-3">
+                        <div class="evaluation-card">
+                            <div class="evaluation-number">${data.evaluation.silhouette_score ? data.evaluation.silhouette_score.toFixed(4) : '-'}</div>
+                            <div>Silhouette Score</div>
+                            <small>semakin tinggi (>0.5) semakin baik</small>
+                        </div>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <div class="evaluation-card orange">
+                            <div class="evaluation-number">${data.evaluation.davies_bouldin_score ? data.evaluation.davies_bouldin_score.toFixed(4) : '-'}</div>
+                            <div>Davies-Bouldin Index</div>
+                            <small>semakin rendah semakin baik</small>
+                        </div>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <div class="evaluation-card purple">
+                            <div class="evaluation-number">${data.evaluation.calinski_harabasz_score ? data.evaluation.calinski_harabasz_score.toFixed(2) : '-'}</div>
+                            <div>Calinski-Harabasz Index</div>
+                            <small>semakin tinggi semakin baik</small>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Cluster Summary - Ringkasan Setiap Cluster -->
+                <h5 class="mb-3"><i class="fas fa-layer-group text-primary"></i> Ringkasan per Cluster</h5>
+                <div class="row mb-4" id="clusterSummary"></div>
+                
+                <!-- Distribution Chart & Top Skills -->
+                <div class="row mb-4">
+                    <div class="col-md-6 mb-3">
+                        <div class="card shadow-sm h-100">
+                            <div class="card-header bg-white">
+                                <h5 class="mb-0"><i class="fas fa-chart-pie"></i> Distribusi Lowongan per Cluster</h5>
+                            </div>
+                            <div class="card-body">
+                                <canvas id="distChart" height="250"></canvas>
+                                <div class="text-center mt-2">
+                                    ${data.clusters.map(c => `<span class="badge bg-primary me-1">${c.name}: ${c.size}</span>`).join('')}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <div class="card shadow-sm h-100">
+                            <div class="card-header bg-white">
+                                <h5 class="mb-0"><i class="fas fa-chart-bar"></i> Top 10 Skill Paling Diminta</h5>
+                            </div>
+                            <div class="card-body">
+                                <canvas id="topSkillsChart" height="250"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Job Table Preview -->
+                <div class="card shadow-sm mb-4">
+                    <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0"><i class="fas fa-table"></i> Preview Lowongan (10 teratas)</h5>
+                        <span class="text-muted small">Klik baris untuk melihat detail</span>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive" id="jobsTable"></div>
+                    </div>
+                </div>
+                
+                <!-- Menu Eksplorasi -->
+                <div class="card shadow-sm mb-4">
+                    <div class="card-header bg-white">
+                        <h5 class="mb-0"><i class="fas fa-compass"></i> Menu Eksplorasi Hasil Clustering</h5>
+                        <small class="text-muted">Klik menu di bawah untuk analisis lebih lanjut</small>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3 text-center">
+                            <div class="col-md-3">
+                                <div class="menu-card card p-3" onclick="location.href='detail-cluster.html'">
+                                    <div class="menu-icon mx-auto">
+                                        <i class="fas fa-layer-group"></i>
+                                    </div>
+                                    <h6 class="mt-2 mb-0">Detail Cluster</h6>
+                                    <small class="text-muted">Lihat analisis lengkap per cluster</small>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="menu-card card p-3" onclick="location.href='skill-analysis.html'">
+                                    <div class="menu-icon mx-auto">
+                                        <i class="fas fa-code"></i>
+                                    </div>
+                                    <h6 class="mt-2 mb-0">Skill Analysis</h6>
+                                    <small class="text-muted">Analisis kombinasi skill</small>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="menu-card card p-3" onclick="location.href='export.html'">
+                                    <div class="menu-icon mx-auto">
+                                        <i class="fas fa-download"></i>
+                                    </div>
+                                    <h6 class="mt-2 mb-0">Export Data</h6>
+                                    <small class="text-muted">Download hasil clustering</small>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="menu-card card p-3" onclick="location.href='visualizations.html'">
+                                    <div class="menu-icon mx-auto">
+                                        <i class="fas fa-chart-line"></i>
+                                    </div>
+                                    <h6 class="mt-2 mb-0">Visualisasi</h6>
+                                    <small class="text-muted">Grafik lanjutan & perbandingan</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('dashboardContent').innerHTML = html;
+            document.getElementById('dashboardContent').style.display = 'block';
+            
+            // Render cluster summary cards
+            let clusterHtml = '';
+            data.clusters.forEach((cluster, idx) => {
+                const clusterClass = `cluster-${cluster.id % 5}`;
+                clusterHtml += `
+                    <div class="col-md-6 mb-3">
+                        <div class="cluster-card card ${clusterClass}">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div>
+                                        <span class="badge bg-primary me-2">Cluster ${cluster.id}</span>
+                                        <strong class="fs-5">${cluster.name}</strong>
+                                    </div>
+                                    <span class="badge bg-secondary">${cluster.size} lowongan</span>
+                                </div>
+                                <div class="mt-2">
+                                    <small class="text-muted">Top Skills:</small>
+                                    <div>
+                                        ${cluster.top_skills.slice(0, 5).map(s => `<span class="skill-tag">${s[0]}</span>`).join('')}
+                                    </div>
+                                </div>
+                                <div class="mt-2">
+                                    <small class="text-muted">Contoh Lowongan:</small>
+                                    <ul class="small mt-1 mb-0">
+                                        ${cluster.sample_jobs.slice(0, 2).map(job => `<li>${job.length > 50 ? job.substring(0, 50) + '...' : job}</li>`).join('')}
+                                    </ul>
+                                </div>
+                                <div class="mt-2">
+                                    <div class="progress" style="height: 6px;">
+                                        <div class="progress-bar bg-primary" style="width: ${cluster.percentage}%"></div>
+                                    </div>
+                                    <small class="text-muted">${cluster.percentage.toFixed(1)}% dari total lowongan</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            document.getElementById('clusterSummary').innerHTML = clusterHtml;
+            
+            // Jobs Table
+            let jobsHtml = `
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="width: 5%">#</th>
+                            <th style="width: 35%">Judul Lowongan</th>
+                            <th style="width: 15%">Platform</th>
+                            <th style="width: 20%">Cluster</th>
+                            <th style="width: 25%">Skills (5 pertama)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+            data.jobs.slice(0, 10).forEach(job => {
+                const skills = job.skills.slice(0, 5).map(s => `<span class="skill-tag">${s.trim()}</span>`).join('');
+                jobsHtml += `
+                    <tr class="job-row" onclick="showJobDetail(${job.id})" style="cursor: pointer;">
+                        <td>${job.id + 1}</td>
+                        <td><strong>${job.judul}</strong></td>
+                        <td><span class="badge bg-info">${job.platform}</span></td>
+                        <td><span class="badge bg-primary">${job.cluster_name}</span></td>
+                        <td>${skills}</td>
+                    </tr>
+                `;
+            });
+            jobsHtml += `</tbody></table>`;
+            if (data.jobs.length > 10) {
+                jobsHtml += `<div class="text-center p-3 text-muted small bg-light">+ ${data.jobs.length - 10} lowongan lainnya. Klik menu "Detail Cluster" untuk melihat semua.</div>`;
+            }
+            document.getElementById('jobsTable').innerHTML = jobsHtml;
+            
+            // Distribution Chart (Pie Chart)
+            const pieCtx = document.getElementById('distChart').getContext('2d');
+            new Chart(pieCtx, {
+                type: 'pie',
+                data: {
+                    labels: data.clusters.map(c => c.name),
+                    datasets: [{
+                        data: data.clusters.map(c => c.size),
+                        backgroundColor: ['#4361ee', '#4caf50', '#ff9800', '#f44336', '#9c27b0', '#00bcd4'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: { position: 'bottom', labels: { font: { size: 11 } } },
+                        tooltip: { callbacks: { label: (ctx) => `${ctx.label}: ${ctx.raw} lowongan (${((ctx.raw / data.n_samples) * 100).toFixed(1)}%)` } }
+                    }
+                }
+            });
+            
+            // Top Skills Chart (Bar Chart)
+            const skillFreq = {};
+            data.jobs.forEach(job => {
+                job.skills.forEach(skill => {
+                    const skillName = skill.trim().toLowerCase();
+                    skillFreq[skillName] = (skillFreq[skillName] || 0) + 1;
+                });
+            });
+            const topSkills = Object.entries(skillFreq).sort((a, b) => b[1] - a[1]).slice(0, 10);
+            
+            const barCtx = document.getElementById('topSkillsChart').getContext('2d');
+            new Chart(barCtx, {
+                type: 'bar',
+                data: {
+                    labels: topSkills.map(s => s[0]),
+                    datasets: [{
+                        label: 'Jumlah Lowongan',
+                        data: topSkills.map(s => s[1]),
+                        backgroundColor: 'rgba(102, 126, 234, 0.7)',
+                        borderRadius: 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: { callbacks: { label: (ctx) => `${ctx.raw} lowongan membutuhkan skill ini` } }
+                    },
+                    scales: {
+                        y: { beginAtZero: true, title: { display: true, text: 'Jumlah Lowongan', font: { size: 11 } } },
+                        x: { ticks: { rotation: 45, maxRotation: 45, minRotation: 45, font: { size: 10 } } }
+                    }
+                }
+            });
+        }
+        
+        function showJobDetail(jobId) {
+            sessionStorage.setItem('selectedJobId', jobId);
+            alert(`Detail lowongan ID: ${jobId + 1}\n\nJudul: ${data.jobs[jobId].judul}\nPlatform: ${data.jobs[jobId].platform}\nCluster: ${data.jobs[jobId].cluster_name}\n\nFitur detail lengkap akan ditampilkan di sini.`);
+        }
+    </script>
+</body>
+</html>

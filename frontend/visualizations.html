@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visualisasi - Segmentasi Lowongan</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <nav class="navbar navbar-dark">
+        <div class="container">
+            <span class="navbar-brand">
+                <i class="fas fa-chart-line me-2"></i>
+                Visualisasi Lanjutan
+            </span>
+            <div>
+                <a href="dashboard.html" class="btn btn-outline-light btn-sm me-2">
+                    <i class="fas fa-tachometer-alt"></i> Dashboard
+                </a>
+                <a href="index.html" class="btn btn-outline-light btn-sm">
+                    <i class="fas fa-home"></i> Home
+                </a>
+            </div>
+        </div>
+    </nav>
+    
+    <div class="container mt-4">
+        <div class="d-flex align-items-center mb-4">
+            <button class="back-btn me-3" onclick="history.back()">
+                <i class="fas fa-arrow-left"></i> Kembali
+            </button>
+            <h3 class="mb-0"><i class="fas fa-chart-simple text-primary"></i> Visualisasi Hasil Clustering</h3>
+        </div>
+        
+        <div id="noDataAlert" class="alert alert-warning text-center" style="display: none;">
+            <i class="fas fa-exclamation-triangle"></i> Belum ada data clustering.
+            <a href="index.html" class="alert-link">Upload data terlebih dahulu</a>
+        </div>
+        
+        <div id="vizContent" style="display: none;"></div>
+    </div>
+    
+    <script>
+        const data = JSON.parse(sessionStorage.getItem('clusteringData'));
+        
+        if (!data) {
+            document.getElementById('noDataAlert').style.display = 'block';
+        } else {
+            document.getElementById('noDataAlert').style.display = 'none';
+            renderVisualizations(data);
+        }
+        
+        function renderVisualizations(data) {
+            let html = '';
+            
+            if (data.elbow_data && data.mode === 'auto') {
+                html += `
+                    <div class="viz-card">
+                        <h5><i class="fas fa-chart-line text-primary"></i> Elbow Method & Silhouette Score</h5>
+                        <canvas id="elbowChart" height="200"></canvas>
+                        <p class="text-muted small mt-2">Grafik menunjukkan inertia dan silhouette score untuk setiap nilai K.</p>
+                    </div>
+                `;
+            }
+            
+            html += `
+                <div class="viz-card">
+                    <h5><i class="fas fa-chart-radar"></i> Perbandingan Profil Skill per Cluster</h5>
+                    <canvas id="radarChart" height="300"></canvas>
+                    <p class="text-muted small mt-2">Perbandingan bobot skill utama antar cluster (dinormalisasi).</p>
+                </div>
+                
+                <div class="viz-card">
+                    <h5><i class="fas fa-th"></i> Heatmap Skill per Cluster</h5>
+                    <canvas id="heatmapChart" height="200"></canvas>
+                    <p class="text-muted small mt-2">Warna gelap menunjukkan skill dominan di cluster tersebut.</p>
+                </div>
+            `;
+            
+            document.getElementById('vizContent').innerHTML = html;
+            document.getElementById('vizContent').style.display = 'block';
+            
+            // Elbow Chart
+            if (data.elbow_data && data.mode === 'auto') {
+                new Chart(document.getElementById('elbowChart'), {
+                    type: 'line',
+                    data: {
+                        labels: data.elbow_data.k_values,
+                        datasets: [
+                            {
+                                label: 'Inertia',
+                                data: data.elbow_data.inertias,
+                                borderColor: '#4361ee',
+                                backgroundColor: 'rgba(67, 97, 238, 0.1)',
+                                fill: true,
+                                tension: 0.4,
+                                yAxisID: 'y'
+                            },
+                            {
+                                label: 'Silhouette Score',
+                                data: data.elbow_data.silhouettes,
+                                borderColor: '#ff9800',
+                                backgroundColor: 'rgba(255, 152, 0, 0.1)',
+                                fill: true,
+                                tension: 0.4,
+                                yAxisID: 'y1'
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: true,
+                        plugins: { legend: { position: 'top' } },
+                        scales: {
+                            y: { title: { display: true, text: 'Inertia' } },
+                            y1: { position: 'right', title: { display: true, text: 'Silhouette Score' }, grid: { drawOnChartArea: false } },
+                            x: { title: { display: true, text: 'Jumlah Cluster (K)' } }
+                        }
+                    }
+                });
+            }
+            
+            // Radar Chart
+            const allTopSkills = new Set();
+            data.clusters.forEach(cluster => {
+                cluster.top_skills.slice(0, 5).forEach(s => allTopSkills.add(s[0]));
+            });
+            const radarSkills = Array.from(allTopSkills).slice(0, 8);
+            
+            const radarData = {
+                labels: radarSkills,
+                datasets: data.clusters.map((cluster, idx) => ({
+                    label: cluster.name,
+                    data: radarSkills.map(skill => {
+                        const skillData = cluster.top_skills.find(t => t[0] === skill);
+                        return skillData ? skillData[1] * 100 : 0;
+                    }),
+                    backgroundColor: `rgba(${100 + idx * 50}, ${100 + idx * 30}, ${200 - idx * 30}, 0.2)`,
+                    borderColor: `rgba(${100 + idx * 50}, ${100 + idx * 30}, ${200 - idx * 30}, 1)`,
+                    pointBackgroundColor: `rgba(${100 + idx * 50}, ${100 + idx * 30}, ${200 - idx * 30}, 1)`,
+                    fill: true
+                }))
+            };
+            
+            new Chart(document.getElementById('radarChart'), {
+                type: 'radar',
+                data: radarData,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: { legend: { position: 'bottom' } }
+                }
+            });
+            
+            // Heatmap
+            const heatmapSkills = radarSkills.slice(0, 6);
+            const heatmapData = {
+                labels: data.clusters.map(c => c.name),
+                datasets: heatmapSkills.map((skill, idx) => ({
+                    label: skill,
+                    data: data.clusters.map(cluster => {
+                        const skillData = cluster.top_skills.find(t => t[0] === skill);
+                        return skillData ? skillData[1] * 100 : 0;
+                    }),
+                    backgroundColor: `rgba(102, 126, 234, ${0.3 + idx * 0.1})`
+                }))
+            };
+            
+            new Chart(document.getElementById('heatmapChart'), {
+                type: 'bar',
+                data: heatmapData,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: { legend: { position: 'top' } },
+                    scales: { y: { beginAtZero: true, title: { display: true, text: 'Bobot Skill (%)' } } }
+                }
+            });
+        }
+    </script>
+</body>
+</html>

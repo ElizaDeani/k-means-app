@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test dengan Alert</title>
+    <style>
+        body { font-family: Arial; padding: 20px; }
+        button { margin: 5px; padding: 10px; font-size: 16px; }
+        .log { background: #f0f0f0; padding: 10px; margin-top: 20px; font-family: monospace; white-space: pre-wrap; max-height: 300px; overflow-y: auto; }
+        #result { margin-top: 20px; background: #e8f0fe; padding: 10px; display: none; }
+        table { border-collapse: collapse; width: 100%; }
+        th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+        th { background: #f5f5f5; }
+    </style>
+</head>
+<body>
+    <h2>Test Upload - Dengan Alert</h2>
+    
+    <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" style="padding: 10px;">
+    <br><br>
+    <button id="previewBtn" style="background: #007bff; color: white;">Preview Upload</button>
+    <button id="defaultBtn" style="background: #28a745; color: white;">Preview Default</button>
+    
+    <div id="log" class="log">Log akan muncul di sini...</div>
+    
+    <div id="result">
+        <h4>Preview Data:</h4>
+        <div id="preview"></div>
+    </div>
+    
+    <script>
+        const API_URL = 'http://localhost:5000/api';
+        const logDiv = document.getElementById('log');
+        
+        function addLog(msg) {
+            const time = new Date().toLocaleTimeString();
+            logDiv.innerHTML += `<div>${time}: ${msg}</div>`;
+            console.log(msg);
+        }
+        
+        function clearLog() {
+            logDiv.innerHTML = '';
+        }
+        
+        // File input change
+        const fileInput = document.getElementById('fileInput');
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                addLog(`✅ File selected: ${e.target.files[0].name}, size: ${e.target.files[0].size} bytes`);
+            } else {
+                addLog(`❌ No file selected`);
+            }
+        });
+        
+        async function callAPI(file = null) {
+            addLog(`📡 callAPI called with file: ${file ? file.name : 'default'}`);
+            
+            const formData = new FormData();
+            if (file) {
+                formData.append('file', file);
+                addLog(`📎 Appending file: ${file.name}`);
+            }
+            formData.append('mode', 'auto');
+            formData.append('max_features', '150');
+            
+            try {
+                addLog(`🚀 Sending request to ${API_URL}/cluster...`);
+                const response = await fetch(`${API_URL}/cluster`, {
+                    method: 'POST',
+                    body: formData
+                });
+                addLog(`📥 Response status: ${response.status}`);
+                
+                const data = await response.json();
+                addLog(`📊 Response success: ${data.success}, jobs: ${data.jobs ? data.jobs.length : 0}`);
+                
+                if (data.success && data.jobs) {
+                    addLog(`✅ Data loaded successfully! ${data.jobs.length} jobs found.`);
+                    alert(`SUKSES! ${data.jobs.length} lowongan ditemukan.`);
+                    return data;
+                } else {
+                    addLog(`❌ Error: ${data.error}`);
+                    alert(`ERROR: ${data.error || 'Invalid response'}`);
+                    return null;
+                }
+            } catch (error) {
+                addLog(`❌ Fetch error: ${error.message}`);
+                alert(`ERROR: ${error.message}\n\nPastikan backend berjalan di http://localhost:5000`);
+                return null;
+            }
+        }
+        
+        function displayPreview(data) {
+            addLog(`🎨 Displaying preview with ${data.jobs.length} jobs`);
+            
+            if (!data || !data.jobs || data.jobs.length === 0) {
+                document.getElementById('preview').innerHTML = '<p>❌ Tidak ada data</p>';
+                return;
+            }
+            
+            let html = '<table>';
+            html += '<thead><tr><th>#</th><th>Judul</th><th>Platform</th><th>Skills (3 pertama)</th></tr></thead><tbody>';
+            
+            for (let i = 0; i < Math.min(5, data.jobs.length); i++) {
+                const job = data.jobs[i];
+                const skills = job.skills && job.skills.length > 0 
+                    ? job.skills.slice(0, 3).map(s => s.trim()).join(', ')
+                    : '-';
+                html += ` 
+                    <tr>
+                        <td>${i+1}</td>
+                        <td><strong>${job.judul || '-'}</strong></td>
+                        <td>${job.platform || '-'}</td>
+                        <td>${skills}</td>
+                    </tr>
+                `;
+            }
+            html += '</tbody></table>';
+            
+            if (data.jobs.length > 5) {
+                html += `<p><small>+ ${data.jobs.length - 5} lowongan lainnya</small></p>`;
+            }
+            
+            // Statistik
+            const uniqueSkills = new Set();
+            for (let job of data.jobs) {
+                if (job.skills) {
+                    for (let s of job.skills) {
+                        uniqueSkills.add(s.trim().toLowerCase());
+                    }
+                }
+            }
+            
+            html += `<hr>
+            <div style="display: flex; gap: 20px;">
+                <div><strong>Total Lowongan:</strong> ${data.jobs.length}</div>
+                <div><strong>Skill Unik:</strong> ${uniqueSkills.size}</div>
+                <div><strong>Jumlah Cluster:</strong> ${data.n_clusters || '-'}</div>
+            </div>`;
+            
+            document.getElementById('preview').innerHTML = html;
+            document.getElementById('result').style.display = 'block';
+            addLog(`✅ Preview displayed successfully!`);
+        }
+        
+        // Tombol Preview Upload
+        document.getElementById('previewBtn').onclick = async () => {
+            addLog('🔵 ========== PREVIEW UPLOAD BUTTON CLICKED ==========');
+            const file = fileInput.files[0];
+            if (!file) {
+                addLog('❌ ERROR: No file selected!');
+                alert('Pilih file terlebih dahulu!');
+                return;
+            }
+            addLog(`📁 File to upload: ${file.name}, size: ${file.size}`);
+            const data = await callAPI(file);
+            if (data) {
+                displayPreview(data);
+                addLog('🎉 Preview upload completed successfully!');
+            } else {
+                addLog('❌ Failed to get data from API');
+            }
+        };
+        
+        // Tombol Preview Default
+        document.getElementById('defaultBtn').onclick = async () => {
+            addLog('🟢 ========== PREVIEW DEFAULT BUTTON CLICKED ==========');
+            const data = await callAPI(null);
+            if (data) {
+                displayPreview(data);
+                addLog('🎉 Preview default completed successfully!');
+            } else {
+                addLog('❌ Failed to get default data');
+            }
+        };
+        
+        // Health check on load
+        addLog('🏁 Page loaded, testing API connection...');
+        fetch(`${API_URL}/health`)
+            .then(r => r.json())
+            .then(d => {
+                addLog(`💚 API Health: ${d.status} - ${d.message}`);
+                if (d.status === 'ok') {
+                    addLog('✅ Backend API is ready!');
+                }
+            })
+            .catch(e => {
+                addLog(`💔 API not reachable: ${e.message}`);
+                addLog('⚠️ Pastikan backend berjalan di http://localhost:5000');
+            });
+    </script>
+</body>
+</html>

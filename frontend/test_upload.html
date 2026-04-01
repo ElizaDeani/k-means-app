@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Simple Test - Upload</title>
+</head>
+<body>
+    <h2>TEST UPLOAD - PASTI JALAN</h2>
+    
+    <input type="file" id="fileInput" accept=".xlsx,.xls,.csv">
+    <button id="testBtn">Test Upload</button>
+    <button id="defaultBtn">Test Default</button>
+    
+    <hr>
+    <h3>Response:</h3>
+    <pre id="result" style="background:#f0f0f0; padding:10px; overflow:auto; max-height:500px;"></pre>
+    
+    <script>
+        const API_URL = 'http://localhost:5000/api';
+        
+        async function callAPI(file = null) {
+            const formData = new FormData();
+            if (file) {
+                formData.append('file', file);
+                document.getElementById('result').textContent = 'Uploading file: ' + file.name + '...\n';
+            } else {
+                document.getElementById('result').textContent = 'Loading default dataset...\n';
+            }
+            formData.append('mode', 'auto');
+            formData.append('max_features', '150');
+            
+            try {
+                const response = await fetch(`${API_URL}/cluster`, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                document.getElementById('result').textContent = JSON.stringify(data, null, 2);
+                
+                if (data.success) {
+                    alert(`SUKSES! ${data.jobs.length} lowongan ditemukan.`);
+                } else {
+                    alert('ERROR: ' + data.error);
+                }
+            } catch (error) {
+                document.getElementById('result').textContent = 'ERROR: ' + error.message;
+                alert('ERROR: ' + error.message);
+            }
+        }
+        
+        document.getElementById('testBtn').onclick = () => {
+            const file = document.getElementById('fileInput').files[0];
+            if (!file) {
+                alert('Pilih file dulu!');
+                return;
+            }
+            callAPI(file);
+        };
+        
+        document.getElementById('defaultBtn').onclick = () => {
+            callAPI(null);
+        };
+        
+        // Test health dulu
+        fetch(`${API_URL}/health`)
+            .then(r => r.json())
+            .then(d => console.log('Health:', d))
+            .catch(e => console.error('Health error:', e));
+    </script>
+</body>
+</html>
