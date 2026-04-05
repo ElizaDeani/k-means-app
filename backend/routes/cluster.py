@@ -10,12 +10,6 @@ cluster_bp = Blueprint('cluster', __name__)
 def cluster():
     """
     Endpoint clustering
-    
-    Request (form-data):
-        - file: file Excel (optional)
-        - mode: 'auto' atau 'manual'
-        - k: jumlah cluster (jika mode manual)
-        - max_features: maksimal fitur (default 150)
     """
     try:
         # Ambil parameter
@@ -35,8 +29,27 @@ def cluster():
         
         # Proses clustering
         result = process_clustering(df, mode, max_features, custom_k)
-        
-        return jsonify(result)
+
+        # Mapping ke format frontend
+        jobs = [
+            {
+                "id": i,
+                "judul": row["judul"],
+                "platform": row["platform"],
+                "skills": [s.strip() for s in str(row["skill_diekstrak"]).split(",")]
+            }
+            for i, row in df.iterrows()
+        ]
+
+        return jsonify({
+    "success": True,
+    "jobs": result.get("jobs", []),   # 🔥 pakai dari result
+    "n_samples": result.get("n_samples", 0),
+    "n_clusters": result.get("n_clusters", 0),
+    "clusters": result.get("clusters", []),
+    "evaluation": result.get("evaluation", {})  # 🔥 INI YANG PALING PENTING
+})
+    
         
     except Exception as e:
         import traceback

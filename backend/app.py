@@ -1,38 +1,38 @@
-# backend/app.py
-from flask import Flask
+from flask import Flask, send_from_directory
 from flask_cors import CORS
 from config import Config
 from routes import register_routes
+import os
 
-# Inisialisasi Flask
+# ✅ 1. BUAT APP DULU
 app = Flask(__name__)
 app.config.from_object(Config)
 
-# Enable CORS (izin frontend panggil API)
-# CORS configuration - allow all origins for development
+# ✅ 2. PATH FRONTEND
+FRONTEND_FOLDER = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), '../frontend')
+)
+
+# ✅ 3. ROUTE FRONTEND
+@app.route('/')
+def index():
+    return send_from_directory(FRONTEND_FOLDER, 'capek.html')
+
+@app.route('/<path:path>')
+def serve_static(path):
+    return send_from_directory(FRONTEND_FOLDER, path)
+
+# ✅ 4. CORS
 CORS(app, resources={
     r"/api/*": {
-        "origins": "*",
-        "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-        "allow_headers": ["Content-Type", "Authorization"]
+        "origins": "*"
     }
 })
 
-# Register semua route
+# ✅ 5. REGISTER API
 register_routes(app)
 
+# ✅ 6. RUN
 if __name__ == '__main__':
-    print("\n" + "="*50)
-    print("🚀 API Server Starting...")
-    print("="*50)
-    print(f"📍 Default dataset: {Config.DEFAULT_DATASET}")
-    print(f"📍 Upload folder: {Config.UPLOAD_FOLDER}")
-    print(f"📍 Health check: http://localhost:{Config.PORT}/api/health")
-    print(f"📍 Cluster endpoint: http://localhost:{Config.PORT}/api/cluster")
-    print("="*50 + "\n")
-    
-    app.run(
-        debug=Config.DEBUG,
-        host=Config.HOST,
-        port=Config.PORT
-    )
+    print("🚀 Server jalan di http://localhost:5000")
+    app.run(debug=True)
