@@ -148,6 +148,7 @@
                 const data = await response.json();
                 console.log('Response received:', data);
                 
+                console.log("FULL RESPONSE:", data);
                 if (data.success) {
                     currentData = data;
                     renderPreview(data);
@@ -227,9 +228,11 @@
         }
         
         previewBtn.addEventListener('click', () => {
-            const file = fileInput.files[0];
-            if (file) loadData(file);
-        });
+    const file = fileInput.files[0];
+    console.log("FILE:", file);
+
+    loadData(file); // paksa jalan
+});
         
         useDefaultBtn.addEventListener('click', () => {
             loadData();
@@ -240,7 +243,49 @@
                 sessionStorage.setItem('clusteringData', JSON.stringify(currentData));
                 window.location.href = 'dashboard.html';
             }
+        const startAnalysisBtn = document.getElementById('startAnalysisBtn');
         });
+        console.log("JS LOADED");
+
+previewBtn.addEventListener('click', () => {
+    console.log("TOMBOL DIKLIK");
+
+    const file = fileInput.files[0];
+    console.log("FILE:", file);
+
+    loadData(file);
+});
+
+async function loadData(file = null) {
+    console.log("LOAD DATA KE-PANGGIL");
+
+    loadingOverlay.style.display = 'flex';
+
+    const formData = new FormData();
+    if (file) {
+        formData.append('file', file);
+    }
+
+    formData.append('mode', 'auto');
+    formData.append('max_features', '150');
+
+    try {
+        console.log("FETCH MULAI...");
+
+        const response = await fetch(`${API_URL}/cluster`, {
+            method: 'POST',
+            body: formData
+        });
+
+        console.log("RESPONSE:", response);
+
+        const data = await response.json();
+        console.log("FULL RESPONSE:", data);
+
+    } catch (error) {
+        console.error("ERROR:", error);
+    }
+}
     </script>
 </body>
 </html>

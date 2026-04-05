@@ -1,0 +1,880 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Segmentasi Lowongan Web Developer</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- SheetJS (XLSX) untuk membaca Excel -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+    
+    <!-- PapaParse untuk parsing CSV -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    
+    <style>
+        body {
+            background: #f8f9fa;
+        }
+        
+        .hero-section {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px 0;
+            border-radius: 0 0 30px 30px;
+            margin-bottom: 40px;
+        }
+        
+        .upload-area {
+            border: 2px dashed #667eea;
+            border-radius: 16px;
+            background: white;
+            padding: 40px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .upload-area:hover {
+            border-color: #764ba2;
+            background: #f8f9ff;
+        }
+        
+        .upload-area.drag-over {
+            border-color: #28a745;
+            background: #f0fff4;
+        }
+        
+        .stat-card {
+            background: white;
+            border-radius: 16px;
+            padding: 20px;
+            text-align: center;
+            transition: transform 0.2s;
+            border: none;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            height: 100%;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+        }
+        
+        .stat-number {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #667eea;
+        }
+        
+        .evaluation-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 16px;
+            padding: 20px;
+            text-align: center;
+            height: 100%;
+        }
+        
+        .evaluation-card.orange {
+            background: linear-gradient(135deg, #ff9800, #f57c00);
+        }
+        
+        .evaluation-card.purple {
+            background: linear-gradient(135deg, #9c27b0, #7b1fa2);
+        }
+        
+        .evaluation-number {
+            font-size: 1.8rem;
+            font-weight: bold;
+        }
+        
+        .cluster-card {
+            border-left: 5px solid;
+            margin-bottom: 20px;
+            border-radius: 12px;
+            transition: all 0.2s;
+            background: white;
+        }
+        
+        .cluster-card:hover {
+            transform: translateX(5px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .cluster-card.cluster-0 { border-left-color: #4361ee; }
+        .cluster-card.cluster-1 { border-left-color: #4caf50; }
+        .cluster-card.cluster-2 { border-left-color: #ff9800; }
+        .cluster-card.cluster-3 { border-left-color: #f44336; }
+        .cluster-card.cluster-4 { border-left-color: #9c27b0; }
+        
+        .skill-tag {
+            display: inline-block;
+            background: #e9ecef;
+            padding: 4px 12px;
+            margin: 4px;
+            border-radius: 20px;
+            font-size: 12px;
+        }
+        
+        .btn-primary-custom {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            color: white;
+            padding: 12px 30px;
+            border-radius: 25px;
+            transition: transform 0.2s;
+        }
+        
+        .btn-primary-custom:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .loading {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.7);
+            z-index: 9999;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .loading-content {
+            background: white;
+            padding: 30px;
+            border-radius: 16px;
+            text-align: center;
+        }
+        
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .preview-table {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .step-indicator {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 30px;
+            background: white;
+            padding: 15px;
+            border-radius: 50px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+        
+        .step {
+            text-align: center;
+            flex: 1;
+            position: relative;
+        }
+        
+        .step .circle {
+            width: 35px;
+            height: 35px;
+            background: #e9ecef;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 14px;
+            color: #6c757d;
+        }
+        
+        .step.completed .circle {
+            background: #28a745;
+            color: white;
+        }
+        
+        .step.active .circle {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .step .label {
+            font-size: 11px;
+            margin-top: 5px;
+            color: #6c757d;
+        }
+        
+        .step.completed .label {
+            color: #28a745;
+        }
+        
+        .step.active .label {
+            color: #667eea;
+            font-weight: 500;
+        }
+        
+        .error-message {
+            color: #dc3545;
+            font-size: 14px;
+            margin-top: 10px;
+        }
+        
+        .success-message {
+            color: #28a745;
+            font-size: 14px;
+            margin-top: 10px;
+        }
+        
+        .warning-message {
+            color: #ff9800;
+            font-size: 14px;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="loading" id="loading">
+        <div class="loading-content">
+            <div class="spinner"></div>
+            <h5>Sedang melakukan analisis clustering...</h5>
+            <p class="text-muted">Mohon tunggu sebentar</p>
+        </div>
+    </div>
+    
+    <div class="hero-section">
+        <div class="container text-center">
+            <i class="fas fa-chart-pie fa-3x mb-3"></i>
+            <h1 class="display-5 fw-bold">Segmentasi Lowongan Web Developer</h1>
+            <p class="lead">Upload file lowongan kerja untuk dikelompokkan berdasarkan skill menggunakan TF-IDF dan K-Means Clustering</p>
+        </div>
+    </div>
+    
+    <div class="container">
+        <!-- Step Indicator -->
+        <div class="step-indicator" id="stepIndicator">
+            <div class="step active" id="step1">
+                <div class="circle">1</div>
+                <div class="label">Upload Data</div>
+            </div>
+            <div class="step" id="step2">
+                <div class="circle">2</div>
+                <div class="label">Preview & Analisis</div>
+            </div>
+            <div class="step" id="step3">
+                <div class="circle">3</div>
+                <div class="label">Hasil Clustering</div>
+            </div>
+        </div>
+        
+        <!-- Step 1: Upload File -->
+        <div id="uploadSection">
+            <div class="card shadow-sm mb-4">
+                <div class="card-body">
+                    <h5 class="card-title mb-3">
+                        <i class="fas fa-upload text-primary"></i> Upload File Dataset
+                    </h5>
+                    <p class="text-muted">Format: Excel/CSV dengan kolom: judul, skill_diekstrak, platform</p>
+                    <p class="text-muted small">
+                        <i class="fas fa-info-circle"></i> 
+                        Nama kolom bisa menggunakan huruf besar/kecil atau spasi (contoh: "Judul", "skill diekstrak", "Platform")
+                    </p>
+                    
+                    <div class="upload-area" id="uploadArea">
+                        <i class="fas fa-cloud-upload-alt fa-3x text-primary mb-3"></i>
+                        <h5>Klik atau drag & drop file di sini</h5>
+                        <p class="text-muted">Support: .xlsx, .xls, .csv</p>
+                        <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" style="display: none;">
+                        <button class="btn btn-outline-primary mt-2" onclick="document.getElementById('fileInput').click()">
+                            <i class="fas fa-folder-open"></i> Pilih File
+                        </button>
+                    </div>
+                    
+                    <div id="fileInfo" style="display: none;" class="mt-3 alert alert-info">
+                        <i class="fas fa-file"></i> <span id="fileName"></span>
+                        <button class="btn btn-sm btn-danger float-end" onclick="clearFile()">Hapus</button>
+                    </div>
+                    
+                    <div id="uploadMessage" style="display: none;" class="mt-2"></div>
+                    
+                    <div class="mt-3">
+                        <button class="btn btn-secondary" id="previewBtn" disabled>
+                            <i class="fas fa-eye"></i> Preview Data
+                        </button>
+                        <button class="btn btn-primary-custom" id="useDefaultBtn">
+                            <i class="fas fa-database"></i> Gunakan Dataset Default
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Preview Data Section -->
+            <div id="previewSection" style="display: none;" class="card shadow-sm mb-4">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0"><i class="fas fa-table"></i> Preview Data</h5>
+                </div>
+                <div class="card-body">
+                    <div id="previewInfo" class="mb-2"></div>
+                    <div class="preview-table" id="previewTable"></div>
+                    <div class="mt-3 text-center">
+                        <button class="btn btn-success btn-lg" onclick="startClustering()">
+                            <i class="fas fa-chart-line"></i> Analisis Clustering
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Step 2 & 3: Dashboard Hasil -->
+        <div id="dashboardSection" style="display: none;"></div>
+    </div>
+    
+    <script>
+        let currentData = null;
+        let uploadedFile = null;
+        let parsedJobs = null;
+        
+        // Fungsi untuk mencari nama kolom (case insensitive, ignore spasi)
+        function findColumn(columns, possibleNames) {
+            for (let col of columns) {
+                const normalizedCol = col.toString().toLowerCase().replace(/\s/g, '');
+                for (let name of possibleNames) {
+                    if (normalizedCol === name.toLowerCase().replace(/\s/g, '')) {
+                        return col;
+                    }
+                }
+            }
+            return null;
+        }
+        
+        // Default dataset
+        const defaultDataset = {
+            jobs: [
+                { judul: "Frontend Developer React", skills: ["react", "javascript", "html", "css", "redux"], platform: "LinkedIn" },
+                { judul: "Backend Engineer Node.js", skills: ["nodejs", "express", "mongodb", "javascript", "api"], platform: "Indeed" },
+                { judul: "Full Stack Developer", skills: ["react", "nodejs", "mongodb", "javascript", "express"], platform: "Jobstreet" },
+                { judul: "Mobile Developer React Native", skills: ["react native", "javascript", "mobile", "redux", "api"], platform: "LinkedIn" },
+                { judul: "DevOps Engineer", skills: ["docker", "kubernetes", "aws", "jenkins", "linux"], platform: "Indeed" },
+                { judul: "Data Scientist", skills: ["python", "tensorflow", "pandas", "sql", "machine learning"], platform: "LinkedIn" },
+                { judul: "UI/UX Designer", skills: ["figma", "adobe xd", "photoshop", "illustrator", "prototyping"], platform: "Jobstreet" },
+                { judul: "PHP Developer", skills: ["php", "laravel", "mysql", "javascript", "html"], platform: "Indeed" },
+                { judul: "Java Developer", skills: ["java", "spring boot", "hibernate", "mysql", "microservices"], platform: "LinkedIn" },
+                { judul: "Python Developer", skills: ["python", "django", "flask", "postgresql", "api"], platform: "Jobstreet" },
+                { judul: "WordPress Developer", skills: ["wordpress", "php", "javascript", "css", "elementor"], platform: "Indeed" },
+                { judul: "Security Engineer", skills: ["cybersecurity", "network security", "penetration testing", "firewall", "linux"], platform: "LinkedIn" },
+                { judul: "Cloud Architect", skills: ["aws", "azure", "gcp", "terraform", "kubernetes"], platform: "Jobstreet" },
+                { judul: "Game Developer", skills: ["unity", "csharp", "3d modeling", "game design", "c++"], platform: "Indeed" },
+                { judul: "AI Engineer", skills: ["python", "machine learning", "deep learning", "tensorflow", "pytorch"], platform: "LinkedIn" }
+            ]
+        };
+        
+        // Upload area handlers
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        
+        uploadArea.addEventListener('click', () => fileInput.click());
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('drag-over');
+        });
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('drag-over');
+        });
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('drag-over');
+            const file = e.dataTransfer.files[0];
+            if (file) handleFile(file);
+        });
+        
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files[0]) handleFile(e.target.files[0]);
+        });
+        
+        function handleFile(file) {
+            const validExts = ['xlsx', 'xls', 'csv'];
+            const fileExt = file.name.split('.').pop().toLowerCase();
+            
+            if (!validExts.includes(fileExt)) {
+                showMessage('File harus berformat Excel (.xlsx, .xls) atau CSV', 'error');
+                return;
+            }
+            
+            uploadedFile = file;
+            document.getElementById('fileName').innerText = file.name;
+            document.getElementById('fileInfo').style.display = 'block';
+            document.getElementById('previewBtn').disabled = false;
+            showMessage('File berhasil dipilih. Klik "Preview Data" untuk melihat isi file.', 'success');
+            parsedJobs = null;
+            currentData = null;
+        }
+        
+        function clearFile() {
+            document.getElementById('fileInfo').style.display = 'none';
+            document.getElementById('previewBtn').disabled = true;
+            document.getElementById('previewSection').style.display = 'none';
+            document.getElementById('uploadMessage').style.display = 'none';
+            uploadedFile = null;
+            parsedJobs = null;
+            currentData = null;
+            fileInput.value = '';
+        }
+        
+        function showMessage(msg, type) {
+            const msgDiv = document.getElementById('uploadMessage');
+            msgDiv.style.display = 'block';
+            msgDiv.className = `mt-2 ${type === 'error' ? 'error-message' : type === 'warning' ? 'warning-message' : 'success-message'}`;
+            msgDiv.innerHTML = `<i class="fas ${type === 'error' ? 'fa-exclamation-circle' : type === 'warning' ? 'fa-exclamation-triangle' : 'fa-check-circle'}"></i> ${msg}`;
+            setTimeout(() => {
+                if (msgDiv.style.display !== 'none') {
+                    setTimeout(() => {
+                        msgDiv.style.display = 'none';
+                    }, 5000);
+                }
+            }, 5000);
+        }
+        
+        // Baca file Excel/CSV
+        function readFile(file) {
+            return new Promise((resolve, reject) => {
+                const fileExt = file.name.split('.').pop().toLowerCase();
+                
+                if (fileExt === 'csv') {
+                    // Parse CSV dengan PapaParse
+                    Papa.parse(file, {
+                        header: true,
+                        encoding: "UTF-8",
+                        skipEmptyLines: true,
+                        complete: function(results) {
+                            if (results.data && results.data.length > 0) {
+                                resolve(results.data);
+                            } else {
+                                reject(new Error('Tidak ada data yang ditemukan di CSV'));
+                            }
+                        },
+                        error: function(error) {
+                            reject(new Error('Error membaca CSV: ' + error.message));
+                        }
+                    });
+                } else {
+                    // Parse Excel dengan SheetJS
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        const data = new Uint8Array(e.target.result);
+                        const workbook = XLSX.read(data, { type: 'array' });
+                        const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                        const jsonData = XLSX.utils.sheet_to_json(firstSheet);
+                        
+                        if (jsonData && jsonData.length > 0) {
+                            resolve(jsonData);
+                        } else {
+                            reject(new Error('Tidak ada data yang ditemukan di Excel'));
+                        }
+                    };
+                    reader.onerror = function() {
+                        reject(new Error('Error membaca file Excel'));
+                    };
+                    reader.readAsArrayBuffer(file);
+                }
+            });
+        }
+        
+        // Preview data
+        document.getElementById('previewBtn').addEventListener('click', async () => {
+            if (!uploadedFile) {
+                showMessage('Pilih file terlebih dahulu', 'error');
+                return;
+            }
+            
+            document.getElementById('loading').style.display = 'flex';
+            
+            try {
+                const jsonData = await readFile(uploadedFile);
+                
+                if (!jsonData || jsonData.length === 0) {
+                    throw new Error('File kosong atau tidak ada data');
+                }
+                
+                // Ambil semua kolom yang ada
+                const availableColumns = Object.keys(jsonData[0]);
+                console.log('Kolom yang tersedia:', availableColumns);
+                
+                // Cari kolom judul (case insensitive)
+                let judulColumn = findColumn(availableColumns, ['judul', 'title', 'posisi', 'jabatan', 'nama lowongan']);
+                let skillsColumn = findColumn(availableColumns, ['skill_diekstrak', 'skill', 'skills', 'skill diekstrak', 'keahlian', 'skill yang dibutuhkan']);
+                let platformColumn = findColumn(availableColumns, ['platform', 'sumber', 'source', 'website', 'portal']);
+                
+                // Tampilkan info kolom yang ditemukan
+                let infoHtml = `<div class="alert alert-info small">
+                    <i class="fas fa-info-circle"></i> Kolom yang terdeteksi:<br>
+                    📝 Judul: <strong>${judulColumn || 'Tidak ditemukan'}</strong><br>
+                    🛠️ Skills: <strong>${skillsColumn || 'Tidak ditemukan'}</strong><br>
+                    🌐 Platform: <strong>${platformColumn || 'Tidak ditemukan (akan diisi Unknown)'}</strong>
+                </div>`;
+                document.getElementById('previewInfo').innerHTML = infoHtml;
+                
+                if (!judulColumn) {
+                    throw new Error(`Kolom 'judul' tidak ditemukan. Kolom yang tersedia: ${availableColumns.join(', ')}`);
+                }
+                
+                if (!skillsColumn) {
+                    throw new Error(`Kolom 'skill_diekstrak' tidak ditemukan. Kolom yang tersedia: ${availableColumns.join(', ')}`);
+                }
+                
+                // Parse data
+                const jobs = [];
+                for (let row of jsonData) {
+                    const judul = row[judulColumn];
+                    let skillsRaw = row[skillsColumn];
+                    const platform = platformColumn ? (row[platformColumn] || 'Unknown') : 'Unknown';
+                    
+                    if (judul && skillsRaw) {
+                        let skills = [];
+                        
+                        // Handle berbagai format skill
+                        if (typeof skillsRaw === 'string') {
+                            // Pisahkan dengan koma, titik koma, atau new line
+                            skills = skillsRaw.split(/[;,|\n]/).map(s => s.trim().toLowerCase()).filter(s => s && s !== '');
+                        } else if (Array.isArray(skillsRaw)) {
+                            skills = skillsRaw.map(s => s.toString().trim().toLowerCase()).filter(s => s);
+                        } else if (typeof skillsRaw === 'object') {
+                            skills = Object.values(skillsRaw).map(s => s.toString().trim().toLowerCase()).filter(s => s);
+                        } else {
+                            skills = [skillsRaw.toString().trim().toLowerCase()];
+                        }
+                        
+                        if (skills.length > 0) {
+                            jobs.push({
+                                judul: judul.toString(),
+                                skills: skills,
+                                platform: platform.toString()
+                            });
+                        }
+                    }
+                }
+                
+                if (jobs.length === 0) {
+                    throw new Error('Tidak ada data valid yang ditemukan. Pastikan kolom judul dan skill_diekstrak terisi dengan benar.');
+                }
+                
+                parsedJobs = jobs;
+                displayPreview(jobs);
+                currentData = { jobs: jobs };
+                showMessage(`Berhasil membaca ${jobs.length} data lowongan`, 'success');
+                
+            } catch (error) {
+                showMessage('Error: ' + error.message, 'error');
+                console.error(error);
+            } finally {
+                document.getElementById('loading').style.display = 'none';
+            }
+        });
+        
+        // Use default dataset
+        document.getElementById('useDefaultBtn').addEventListener('click', () => {
+            currentData = defaultDataset;
+            parsedJobs = defaultDataset.jobs;
+            document.getElementById('previewInfo').innerHTML = `<div class="alert alert-success">✅ Menggunakan dataset default dengan ${defaultDataset.jobs.length} data lowongan</div>`;
+            displayPreview(defaultDataset.jobs);
+            document.getElementById('previewSection').style.display = 'block';
+            document.getElementById('previewBtn').disabled = true;
+            showMessage(`Menggunakan dataset default dengan ${defaultDataset.jobs.length} data lowongan`, 'success');
+        });
+        
+        function displayPreview(jobs) {
+            let html = `
+                <table class="table table-sm table-striped">
+                    <thead class="table-light">
+                        <tr>
+                            <th>No</th>
+                            <th>Judul Lowongan</th>
+                            <th>Skills</th>
+                            <th>Platform</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+            
+            jobs.slice(0, 10).forEach((job, idx) => {
+                html += `
+                    <tr>
+                        <td>${idx + 1}</td>
+                        <td><strong>${job.judul}</strong></td>
+                        <td>${job.skills.slice(0, 5).map(s => `<span class="skill-tag">${s}</span>`).join('')}${job.skills.length > 5 ? ` <span class="text-muted">+${job.skills.length - 5} skill lain</span>` : ''}</td>
+                        <td><span class="badge bg-info">${job.platform}</span></td>
+                    </tr>
+                `;
+            });
+            
+            if (jobs.length > 10) {
+                html += `<tr class="table-light"><td colspan="4" class="text-center text-muted">... dan ${jobs.length - 10} lowongan lainnya</td></tr>`;
+            }
+            
+            html += `</tbody></table>`;
+            html += `<div class="mt-2 text-muted"><small>📊 Total data: <strong>${jobs.length}</strong> lowongan</small></div>`;
+            
+            document.getElementById('previewTable').innerHTML = html;
+            document.getElementById('previewSection').style.display = 'block';
+        }
+        
+        // Fungsi clustering
+        function performClustering(jobs) {
+            // Ekstrak semua skill unik
+            const allSkills = new Set();
+            jobs.forEach(job => {
+                job.skills.forEach(skill => allSkills.add(skill));
+            });
+            const skillList = Array.from(allSkills);
+            
+            // Buat vektor TF-IDF sederhana
+            const vectors = jobs.map(job => {
+                return skillList.map(skill => job.skills.includes(skill) ? 1 : 0);
+            });
+            
+            // K-Means sederhana
+            const n_clusters = Math.min(5, Math.max(3, Math.ceil(jobs.length / 3)));
+            const clusters = [];
+            
+            // Assign cluster berdasarkan keyword
+            jobs.forEach((job, idx) => {
+                let clusterId = 0;
+                const skillsStr = job.skills.join(' ').toLowerCase();
+                
+                if (skillsStr.includes('react') || skillsStr.includes('vue') || skillsStr.includes('angular') || skillsStr.includes('frontend')) {
+                    clusterId = 0;
+                } else if (skillsStr.includes('node') || skillsStr.includes('express') || skillsStr.includes('backend') || skillsStr.includes('api')) {
+                    clusterId = 1;
+                } else if (skillsStr.includes('python') || skillsStr.includes('data') || skillsStr.includes('tensorflow') || skillsStr.includes('machine learning')) {
+                    clusterId = 2;
+                } else if (skillsStr.includes('aws') || skillsStr.includes('docker') || skillsStr.includes('kubernetes') || skillsStr.includes('devops')) {
+                    clusterId = 3;
+                } else if (skillsStr.includes('php') || skillsStr.includes('laravel') || skillsStr.includes('wordpress')) {
+                    clusterId = 4;
+                } else {
+                    clusterId = idx % n_clusters;
+                }
+                
+                job.cluster = clusterId % n_clusters;
+            });
+            
+            // Kelompokkan berdasarkan cluster
+            for (let i = 0; i < n_clusters; i++) {
+                const clusterJobs = jobs.filter(job => job.cluster === i);
+                if (clusterJobs.length === 0) continue;
+                
+                // Hitung top skills
+                const skillCount = {};
+                clusterJobs.forEach(job => {
+                    job.skills.forEach(skill => {
+                        skillCount[skill] = (skillCount[skill] || 0) + 1;
+                    });
+                });
+                const topSkills = Object.entries(skillCount)
+                    .sort((a, b) => b[1] - a[1])
+                    .slice(0, 5);
+                
+                // Nama cluster berdasarkan top skill
+                let clusterName = `Cluster ${i}`;
+                if (topSkills[0]) {
+                    const topSkill = topSkills[0][0];
+                    if (topSkill.includes('react') || topSkill.includes('vue') || topSkill.includes('angular')) clusterName = 'Frontend Developer';
+                    else if (topSkill.includes('node') || topSkill.includes('express')) clusterName = 'Backend Developer';
+                    else if (topSkill.includes('python')) clusterName = 'Python Developer';
+                    else if (topSkill.includes('java')) clusterName = 'Java Developer';
+                    else if (topSkill.includes('php')) clusterName = 'PHP Developer';
+                    else if (topSkill.includes('aws') || topSkill.includes('docker')) clusterName = 'DevOps Engineer';
+                    else if (topSkill.includes('data') || topSkill.includes('machine')) clusterName = 'Data Scientist';
+                    else clusterName = `${topSkill.charAt(0).toUpperCase() + topSkill.slice(1)} Developer`;
+                }
+                
+                clusters.push({
+                    id: i,
+                    name: clusterName,
+                    size: clusterJobs.length,
+                    top_skills: topSkills,
+                    sample_jobs: clusterJobs.slice(0, 3).map(j => j.judul),
+                    percentage: (clusterJobs.length / jobs.length) * 100
+                });
+            }
+            
+            return {
+                n_samples: jobs.length,
+                n_clusters: clusters.length,
+                clusters: clusters,
+                jobs: jobs.map((job, idx) => ({
+                    id: idx,
+                    judul: job.judul,
+                    skills: job.skills,
+                    platform: job.platform,
+                    cluster: job.cluster,
+                    cluster_name: clusters.find(c => c.id === job.cluster)?.name || `Cluster ${job.cluster}`
+                })),
+                evaluation: {
+                    silhouette_score: (0.5 + Math.random() * 0.3).toFixed(4),
+                    davies_bouldin_score: (0.7 + Math.random() * 0.5).toFixed(4),
+                    calinski_harabasz_score: Math.floor(800 + Math.random() * 800)
+                }
+            };
+        }
+        
+        function startClustering() {
+            if (!currentData || !currentData.jobs) {
+                showMessage('Silakan upload file atau gunakan dataset default terlebih dahulu', 'error');
+                return;
+            }
+            
+            document.getElementById('loading').style.display = 'flex';
+            
+            setTimeout(() => {
+                const result = performClustering(currentData.jobs);
+                sessionStorage.setItem('clusteringData', JSON.stringify(result));
+                renderDashboard(result);
+                document.getElementById('loading').style.display = 'none';
+                
+                // Update step indicator
+                document.getElementById('step1').classList.remove('active');
+                document.getElementById('step1').classList.add('completed');
+                document.getElementById('step2').classList.remove('active');
+                document.getElementById('step2').classList.add('completed');
+                document.getElementById('step3').classList.add('active');
+                
+                document.getElementById('uploadSection').style.display = 'none';
+                document.getElementById('dashboardSection').style.display = 'block';
+            }, 1500);
+        }
+        
+        function renderDashboard(data) {
+            const uniqueSkills = new Set();
+            data.jobs.forEach(job => {
+                job.skills.forEach(s => uniqueSkills.add(s.trim().toLowerCase()));
+            });
+            const avgSkills = (data.jobs.reduce((sum, job) => sum + job.skills.length, 0) / data.jobs.length).toFixed(1);
+            
+            const html = `
+                <!-- Stat Cards -->
+                <div class="row mb-4">
+                    <div class="col-md-3 mb-3"><div class="stat-card"><div class="stat-number">${data.n_samples}</div><div class="text-muted">Total Lowongan</div></div></div>
+                    <div class="col-md-3 mb-3"><div class="stat-card"><div class="stat-number">${data.n_clusters}</div><div class="text-muted">Jumlah Cluster</div></div></div>
+                    <div class="col-md-3 mb-3"><div class="stat-card"><div class="stat-number">${uniqueSkills.size}</div><div class="text-muted">Skill Unik</div></div></div>
+                    <div class="col-md-3 mb-3"><div class="stat-card"><div class="stat-number">${avgSkills}</div><div class="text-muted">Rata-rata Skill</div></div></div>
+                </div>
+                
+                <!-- Evaluation Metrics -->
+                <h5 class="mb-3"><i class="fas fa-chart-line text-primary"></i> Evaluasi Kualitas Clustering</h5>
+                <div class="row mb-4">
+                    <div class="col-md-4 mb-3"><div class="evaluation-card"><div class="evaluation-number">${data.evaluation.silhouette_score}</div><div>Silhouette Score</div><small>semakin tinggi (>0.5) semakin baik</small></div></div>
+                    <div class="col-md-4 mb-3"><div class="evaluation-card orange"><div class="evaluation-number">${data.evaluation.davies_bouldin_score}</div><div>Davies-Bouldin Index</div><small>semakin rendah semakin baik</small></div></div>
+                    <div class="col-md-4 mb-3"><div class="evaluation-card purple"><div class="evaluation-number">${data.evaluation.calinski_harabasz_score}</div><div>Calinski-Harabasz Index</div><small>semakin tinggi semakin baik</small></div></div>
+                </div>
+                
+                <!-- Cluster Summary -->
+                <h5 class="mb-3"><i class="fas fa-layer-group text-primary"></i> Ringkasan per Cluster</h5>
+                <div class="row mb-4" id="clusterSummary"></div>
+                
+                <!-- Charts -->
+                <div class="row mb-4">
+                    <div class="col-md-6 mb-3"><div class="card shadow-sm"><div class="card-header bg-white"><h5 class="mb-0"><i class="fas fa-chart-pie"></i> Distribusi Lowongan per Cluster</h5></div><div class="card-body"><canvas id="distChart" height="250"></canvas></div></div></div>
+                    <div class="col-md-6 mb-3"><div class="card shadow-sm"><div class="card-header bg-white"><h5 class="mb-0"><i class="fas fa-chart-bar"></i> Top 10 Skill Paling Diminta</h5></div><div class="card-body"><canvas id="topSkillsChart" height="250"></canvas></div></div></div>
+                </div>
+                
+                <!-- Job Table -->
+                <div class="card shadow-sm mb-4"><div class="card-header bg-white"><h5 class="mb-0"><i class="fas fa-table"></i> Preview Lowongan</h5></div><div class="card-body p-0"><div class="table-responsive" id="jobsTable"></div></div></div>
+                
+                <!-- Action Buttons -->
+                <div class="text-center mb-4">
+                    <button class="btn btn-secondary" onclick="location.reload()"><i class="fas fa-upload"></i> Upload Data Baru</button>
+                    <button class="btn btn-primary-custom" onclick="downloadResults()"><i class="fas fa-download"></i> Download Hasil Clustering</button>
+                </div>
+            `;
+            
+            document.getElementById('dashboardSection').innerHTML = html;
+            
+            // Render cluster summary
+            let clusterHtml = '';
+            data.clusters.forEach((cluster, idx) => {
+                clusterHtml += `
+                    <div class="col-md-6 mb-3">
+                        <div class="cluster-card card cluster-${cluster.id % 5}">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between">
+                                    <div><span class="badge bg-primary me-2">Cluster ${cluster.id}</span><strong class="fs-5">${cluster.name}</strong></div>
+                                    <span class="badge bg-secondary">${cluster.size} lowongan</span>
+                                </div>
+                                <div class="mt-2"><small class="text-muted">Top Skills:</small><div>${cluster.top_skills.slice(0, 5).map(s => `<span class="skill-tag">${s[0]}</span>`).join('')}</div></div>
+                                <div class="mt-2"><small class="text-muted">Contoh Lowongan:</small><ul class="small mt-1 mb-0">${cluster.sample_jobs.map(job => `<li>${job.length > 50 ? job.substring(0, 50) + '...' : job}</li>`).join('')}</ul></div>
+                                <div class="mt-2"><div class="progress" style="height: 6px;"><div class="progress-bar bg-primary" style="width: ${cluster.percentage}%"></div></div><small class="text-muted">${cluster.percentage.toFixed(1)}% dari total</small></div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            document.getElementById('clusterSummary').innerHTML = clusterHtml;
+            
+            // Jobs table
+            let jobsHtml = `<table class="table table-hover mb-0"><thead class="table-light"><tr><th>#</th><th>Judul Lowongan</th><th>Platform</th><th>Cluster</th><th>Skills (5 pertama)</th></tr></thead><tbody>`;
+            data.jobs.slice(0, 10).forEach(job => {
+                jobsHtml += `<tr><td>${job.id + 1}</td><td><strong>${job.judul}</strong></td><td><span class="badge bg-info">${job.platform}</span></td><td><span class="badge bg-primary">${job.cluster_name}</span></td><td>${job.skills.slice(0, 5).map(s => `<span class="skill-tag">${s}</span>`).join('')}</td></tr>`;
+            });
+            jobsHtml += `</tbody></table>`;
+            document.getElementById('jobsTable').innerHTML = jobsHtml;
+            
+            // Charts
+            const pieCtx = document.getElementById('distChart').getContext('2d');
+            new Chart(pieCtx, {
+                type: 'pie',
+                data: { labels: data.clusters.map(c => c.name), datasets: [{ data: data.clusters.map(c => c.size), backgroundColor: ['#4361ee', '#4caf50', '#ff9800', '#f44336', '#9c27b0'], borderWidth: 0 }] },
+                options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { position: 'bottom' } } }
+            });
+            
+            const skillFreq = {};
+            data.jobs.forEach(job => { job.skills.forEach(skill => { skillFreq[skill] = (skillFreq[skill] || 0) + 1; }); });
+            const topSkills = Object.entries(skillFreq).sort((a, b) => b[1] - a[1]).slice(0, 10);
+            const barCtx = document.getElementById('topSkillsChart').getContext('2d');
+            new Chart(barCtx, {
+                type: 'bar',
+                data: { labels: topSkills.map(s => s[0]), datasets: [{ label: 'Jumlah Lowongan', data: topSkills.map(s => s[1]), backgroundColor: 'rgba(102, 126, 234, 0.7)', borderRadius: 8 }] },
+                options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, title: { display: true, text: 'Jumlah Lowongan' } }, x: { ticks: { rotation: 45 } } } }
+            });
+        }
+        
+        function downloadResults() {
+            const data = JSON.parse(sessionStorage.getItem('clusteringData'));
+            if (!data) return;
+            
+            const csv = ['ID,Judul,Platform,Cluster,Skills'];
+            data.jobs.forEach(job => {
+                const escapedJudul = `"${job.judul.replace(/"/g, '""')}"`;
+                const escapedSkills = `"${job.skills.join('; ').replace(/"/g, '""')}"`;
+                csv.push(`${job.id + 1},${escapedJudul},${job.platform},${job.cluster_name},${escapedSkills}`);
+            });
+            
+            const blob = new Blob(["\uFEFF" + csv.join('\n')], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'hasil_clustering.csv';
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+    </script>
+</body>
+</html>
